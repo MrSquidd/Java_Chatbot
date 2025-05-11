@@ -6,7 +6,7 @@ import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
-@Database(entities = {ChatSession.class, Message.class}, version = 1)
+@Database(entities = {ChatSession.class, Message.class}, version = 2)
 public abstract class ChatDatabase extends RoomDatabase {
     private static volatile ChatDatabase INSTANCE;
 
@@ -17,10 +17,11 @@ public abstract class ChatDatabase extends RoomDatabase {
             synchronized (ChatDatabase.class) {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(
-                            context.getApplicationContext(),
-                            ChatDatabase.class,
-                            "chat_db"
-                    ).build();
+                                    context.getApplicationContext(),
+                                    ChatDatabase.class,
+                                    "chat_db"
+                            ).fallbackToDestructiveMigration()
+                            .build();
                 }
             }
         }

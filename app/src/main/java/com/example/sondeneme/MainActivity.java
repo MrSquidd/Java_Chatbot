@@ -26,16 +26,19 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 
 import com.example.sondeneme.data.ChatRepository;
 import com.example.sondeneme.data.ChatSession;
+import com.example.sondeneme.data.Message;
 import com.example.sondeneme.ui.ChatDrawerFragment;
-import com.google.android.material.navigation.NavigationView;
 
 import org.example.GeminiApiClient;
 import org.example.GeminiCallback;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements ChatDrawerFragment.OnChatSelectedListener {
@@ -44,7 +47,6 @@ public class MainActivity extends AppCompatActivity implements ChatDrawerFragmen
     private static final int IMAGE_PICK_CODE = 101;
 
     private DrawerLayout drawerLayout;
-    private NavigationView navView;
     private LinearLayout chatLayout;
     private EditText etUserInput;
     private ImageButton btnSend, btnMic, btnAdd;
@@ -59,23 +61,25 @@ public class MainActivity extends AppCompatActivity implements ChatDrawerFragmen
     protected void onCreate(Bundle savedInstanceState) {
         SharedPreferences prefs = getSharedPreferences("app_settings", MODE_PRIVATE);
         boolean isDark = prefs.getBoolean("dark_mode", false);
-        if (isDark) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        } else {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        }
+        AppCompatDelegate.setDefaultNightMode(
+                isDark ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         client = new GeminiApiClient(this);
         repository = new ChatRepository(this);
 
-        // Drawer + Toolbar
         drawerLayout = findViewById(R.id.drawer_layout);
-        navView = findViewById(R.id.nav_view);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayShowTitleEnabled(false);
+
+        ImageButton btnSettings = findViewById(R.id.btn_settings);
+        btnSettings.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            startActivity(intent);
+        });
 
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawerLayout, toolbar,
@@ -83,17 +87,6 @@ public class MainActivity extends AppCompatActivity implements ChatDrawerFragmen
         drawerLayout.addDrawerListener(toggle);
         toggle.syncState();
 
-        // Navigation menu
-        navView.setNavigationItemSelectedListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.nav_settings) {
-                startActivity(new Intent(this, SettingsActivity.class));
-            }
-            drawerLayout.closeDrawers();
-            return true;
-        });
-
-        // Chat layout
         chatLayout = findViewById(R.id.chatLayout);
         etUserInput = findViewById(R.id.etUserInput);
         btnSend = findViewById(R.id.btnSend);
@@ -103,19 +96,17 @@ public class MainActivity extends AppCompatActivity implements ChatDrawerFragmen
 
         checkImagePermission();
 
-        // Voice input
         btnMic.setOnClickListener(v -> startVoiceInput());
 
-        // Image pick
         btnAdd.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_PICK);
             intent.setType("image/*");
             startActivityForResult(intent, IMAGE_PICK_CODE);
         });
 
-        // Send
         btnSend.setOnClickListener(v -> {
             String userMessage = etUserInput.getText().toString().trim();
+
             if (userMessage.isEmpty() && selectedImageUri == null) {
                 Toast.makeText(this, "Metin ya da görsel giriniz", Toast.LENGTH_SHORT).show();
                 return;
@@ -123,10 +114,23 @@ public class MainActivity extends AppCompatActivity implements ChatDrawerFragmen
 
             addUserCombinedMessage(userMessage, selectedImageUri);
 
+            if (currentSessionId != -1) {
+                Message message = new Message(currentSessionId, userMessage, true,
+                        selectedImageUri != null ? selectedImageUri.toString() : null,
+                        System.currentTimeMillis());
+                repository.insertMessage(message);
+            }
+
             client.askWithImage(userMessage, selectedImageUri, new GeminiCallback() {
                 @Override
                 public void onResponse(String reply) {
-                    runOnUiThread(() -> addBotCombinedMessage(reply, null));
+                    runOnUiThread(() -> {
+                        addBotCombinedMessage(reply, null);
+                        if (currentSessionId != -1) {
+                            Message botMessage = new Message(currentSessionId, reply, false, null, System.currentTimeMillis());
+                            repository.insertMessage(botMessage);
+                        }
+                    });
                 }
             });
 
@@ -134,17 +138,68 @@ public class MainActivity extends AppCompatActivity implements ChatDrawerFragmen
             selectedImageUri = null;
         });
 
-        // Sohbet menüsünü başlat
         if (savedInstanceState == null) {
-            ChatDrawerFragment fragment = new ChatDrawerFragment();
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.chat_drawer_container, fragment)
-                    .commit();
+            FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+            transaction.replace(R.id.chat_drawer_container, new ChatDrawerFragment());
+            transaction.commit();
         }
     }
 
-    // Voice input
+    @Override
+    public void onNewChat() {
+        ChatSession newSession = new ChatSession();
+        newSession.title = generateRandomTitle();
+        newSession.timestamp = System.currentTimeMillis();
+
+        repository.insertSession(newSession, sessionId -> {
+            currentSessionId = sessionId.intValue();
+            runOnUiThread(() -> {
+                chatLayout.removeAllViews();
+                etUserInput.setText("");
+                selectedImageUri = null;
+                Toast.makeText(this, "Yeni sohbet: " + newSession.title, Toast.LENGTH_SHORT).show();
+
+                Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.chat_drawer_container);
+                if (fragment instanceof ChatDrawerFragment) {
+                    ((ChatDrawerFragment) fragment).refreshSessionList();
+                }
+            });
+        });
+    }
+
+    @Override
+    public void onChatSelected(ChatSession session) {
+        currentSessionId = session.id;
+        chatLayout.removeAllViews();
+
+        repository.getMessagesForSession(session.id, messages -> {
+            runOnUiThread(() -> {
+                if (messages == null || messages.isEmpty()) {
+                    Toast.makeText(this, "Bu sohbette mesaj yok", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                for (Message msg : messages) {
+                    Uri uri = msg.imageUri != null ? Uri.parse(msg.imageUri) : null;
+                    if (msg.isUser) {
+                        addUserCombinedMessage(msg.content, uri);
+                    } else {
+                        addBotCombinedMessage(msg.content, uri);
+                    }
+                }
+            });
+        });
+    }
+
+    private String generateRandomTitle() {
+        String[] titles = {
+                "Project Alpha", "Daily Thoughts", "Midnight Notes", "Code Review",
+                "Debug Zone", "Idea Burst", "Mind Notes", "Quick Log", "Free Flow", "Echo Stream"
+        };
+        int i = (int) (Math.random() * titles.length);
+        return titles[i];
+    }
+
     private void startVoiceInput() {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -158,7 +213,6 @@ public class MainActivity extends AppCompatActivity implements ChatDrawerFragmen
         }
     }
 
-    // Permission
     private void checkImagePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
@@ -175,18 +229,13 @@ public class MainActivity extends AppCompatActivity implements ChatDrawerFragmen
         }
     }
 
-    // Mesaj ekleme
     private void addUserCombinedMessage(String message, Uri imageUri) {
-        View userMessageView = getLayoutInflater().inflate(R.layout.message_item_user, null);
-        TextView tvMessage = userMessageView.findViewById(R.id.tvMessage);
-        ImageView imgMessage = userMessageView.findViewById(R.id.imgUserMessage);
+        View view = getLayoutInflater().inflate(R.layout.message_item_user, null);
+        TextView tvMessage = view.findViewById(R.id.tvMessage);
+        ImageView imgMessage = view.findViewById(R.id.imgUserMessage);
 
-        if (message != null && !message.isEmpty()) {
-            tvMessage.setText(message);
-            tvMessage.setVisibility(View.VISIBLE);
-        } else {
-            tvMessage.setVisibility(View.GONE);
-        }
+        tvMessage.setText(message);
+        tvMessage.setVisibility(message.isEmpty() ? View.GONE : View.VISIBLE);
 
         if (imageUri != null) {
             imgMessage.setImageURI(imageUri);
@@ -195,21 +244,17 @@ public class MainActivity extends AppCompatActivity implements ChatDrawerFragmen
             imgMessage.setVisibility(View.GONE);
         }
 
-        chatLayout.addView(userMessageView);
+        chatLayout.addView(view);
         scrollToBottom();
     }
 
     private void addBotCombinedMessage(String message, Uri imageUri) {
-        View botMessageView = getLayoutInflater().inflate(R.layout.message_item_bot, null);
-        TextView tvMessage = botMessageView.findViewById(R.id.tvMessage);
-        ImageView imgMessage = botMessageView.findViewById(R.id.imgBotMessage);
+        View view = getLayoutInflater().inflate(R.layout.message_item_bot, null);
+        TextView tvMessage = view.findViewById(R.id.tvMessage);
+        ImageView imgMessage = view.findViewById(R.id.imgBotMessage);
 
-        if (message != null && !message.isEmpty()) {
-            tvMessage.setText(message);
-            tvMessage.setVisibility(View.VISIBLE);
-        } else {
-            tvMessage.setVisibility(View.GONE);
-        }
+        tvMessage.setText(message);
+        tvMessage.setVisibility(message.isEmpty() ? View.GONE : View.VISIBLE);
 
         if (imageUri != null) {
             imgMessage.setImageURI(imageUri);
@@ -218,7 +263,7 @@ public class MainActivity extends AppCompatActivity implements ChatDrawerFragmen
             imgMessage.setVisibility(View.GONE);
         }
 
-        chatLayout.addView(botMessageView);
+        chatLayout.addView(view);
         scrollToBottom();
     }
 
@@ -226,28 +271,18 @@ public class MainActivity extends AppCompatActivity implements ChatDrawerFragmen
         scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
     }
 
-    // Yeni sohbet başlatıldığında
     @Override
-    public void onNewChat() {
-        ChatSession newSession = new ChatSession();
-        newSession.title = "Sohbet - " + System.currentTimeMillis();
-        newSession.timestamp = System.currentTimeMillis();
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
 
-        repository.insertSession(newSession, sessionId -> {
-            currentSessionId = sessionId.intValue();
-            runOnUiThread(() -> {
-                Toast.makeText(this, "Yeni sohbet başlatıldı", Toast.LENGTH_SHORT).show();
-            });
-        });
-    }
-
-    // Mevcut sohbete tıklanırsa
-    @Override
-    public void onChatSelected(ChatSession session) {
-        currentSessionId = session.id;
-        runOnUiThread(() -> {
-            Toast.makeText(this, "Sohbet seçildi: " + session.title, Toast.LENGTH_SHORT).show();
-            // TODO: Eski mesajları yükle
-        });
+        if (requestCode == REQ_CODE_SPEECH_INPUT && resultCode == RESULT_OK && data != null) {
+            ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (results != null && !results.isEmpty()) {
+                etUserInput.setText(results.get(0));
+            }
+        } else if (requestCode == IMAGE_PICK_CODE && resultCode == RESULT_OK && data != null) {
+            selectedImageUri = data.getData();
+            Toast.makeText(this, "Görsel seçildi", Toast.LENGTH_SHORT).show();
+        }
     }
 }

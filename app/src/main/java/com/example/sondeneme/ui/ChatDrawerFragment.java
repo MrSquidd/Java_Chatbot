@@ -2,7 +2,6 @@ package com.example.sondeneme.ui;
 
 import android.content.Context;
 import android.os.Bundle;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -18,18 +17,17 @@ import com.example.sondeneme.R;
 import com.example.sondeneme.data.ChatRepository;
 import com.example.sondeneme.data.ChatSession;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class ChatDrawerFragment extends Fragment {
 
     private ChatRepository repository;
-    private ChatListAdapter adapter;
+    private ChatSessionAdapter adapter;
     private OnChatSelectedListener listener;
 
     public interface OnChatSelectedListener {
-        void onNewChat();
         void onChatSelected(ChatSession session);
+        void onNewChat();
     }
 
     @Override
@@ -37,40 +35,44 @@ public class ChatDrawerFragment extends Fragment {
         super.onAttach(context);
         if (context instanceof OnChatSelectedListener) {
             listener = (OnChatSelectedListener) context;
+        } else {
+            throw new RuntimeException("Activity must implement OnChatSelectedListener");
         }
-        repository = new ChatRepository(context);
     }
 
+    @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_chat_drawer, container, false);
-    }
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_chat_drawer, container, false);
 
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
+        repository = new ChatRepository(requireContext());
 
-        Button newChatBtn = view.findViewById(R.id.btn_new_chat);
         RecyclerView recyclerView = view.findViewById(R.id.recycler_chat_sessions);
-
-        adapter = new ChatListAdapter(new ArrayList<>(), session -> {
-            if (listener != null) listener.onChatSelected(session);
-        });
-
-        recyclerView.setAdapter(adapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        adapter = new ChatSessionAdapter(session -> {
+            if (listener != null) {
+                listener.onChatSelected(session);
+            }
+        });
+        recyclerView.setAdapter(adapter);
 
-        newChatBtn.setOnClickListener(v -> {
-            if (listener != null) listener.onNewChat();
+        Button btnNewChat = view.findViewById(R.id.btn_new_chat);
+        btnNewChat.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onNewChat();
+            }
         });
 
-        loadSessions();
+        refreshSessionList();
+
+        return view;
     }
 
-    private void loadSessions() {
-        repository.getAllSessions(sessions -> getActivity().runOnUiThread(() -> {
-            adapter.updateSessions(sessions);
-        }));
+    public void refreshSessionList() {
+        repository.getAllSessions(sessions -> {
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> adapter.setSessions(sessions));
+            }
+        });
     }
 }
