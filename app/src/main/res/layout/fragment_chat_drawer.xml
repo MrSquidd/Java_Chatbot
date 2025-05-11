@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/chat_drawer_layout"
@@ -34,5 +33,4 @@
         android:layout_weight="1"
         android:paddingTop="16dp"
         tools:listitem="@layout/item_chat_session" />
-
 </LinearLayout>
