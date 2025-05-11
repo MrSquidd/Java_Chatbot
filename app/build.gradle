@@ -1,0 +1,51 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android' // varsa kullan
+}
+
+// 👇 Bu kısım android bloğundan önce olmalı
+def localProperties = new Properties()
+localProperties.load(new FileInputStream(rootProject.file("local.properties")))
+def geminiApiKey = localProperties.getProperty("GEMINI_API_KEY") // büyük harfle yazmalısın!
+
+android {
+    namespace 'com.example.sondeneme'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.example.sondeneme"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+
+        // 👇 Burada artık sorunsuz çalışacak
+        buildConfigField "String", "GEMINI_API_KEY", "\"${geminiApiKey}\""
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.android.volley:volley:1.2.1'
+}

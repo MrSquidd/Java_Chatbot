@@ -1,0 +1,21 @@
+def localProperties = new Properties()
+localProperties.load(new FileInputStream(rootProject.file("local.properties")))
+def geminiApiKey = localProperties.getProperty("GEMINI_API_KEY")
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}

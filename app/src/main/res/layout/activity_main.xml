@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/background_gradient">
+
+
+    <!-- Başlık -->
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/app_title"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:layout_gravity="center_horizontal"
+        android:padding="10dp"
+        android:fontFamily="@font/popins_bold" />
+
+    <!-- Sohbet mesajlarını gösterecek alan -->
+    <ScrollView
+        android:id="@+id/scrollView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="8dp">
+
+        <LinearLayout
+            android:id="@+id/chatLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <!-- Kullanıcı giriş ve butonlar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="4dp">
+
+        <ImageButton
+            android:id="@+id/btnAdd"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_add"
+            android:background="@android:color/transparent"
+            android:contentDescription="Add"
+            android:padding="6dp" />
+        <!-- Mesaj Giriş Alanı -->
+        <EditText
+            android:id="@+id/etUserInput"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:hint="@string/hint_message"
+            android:inputType="text"
+            android:autofillHints="text"
+            android:padding="10dp"
+            android:background="@drawable/et_background"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#AAAAAA" />
+
+        <!-- 🎤 Mikrofon Butonu -->
+
+        <ImageButton
+            android:id="@+id/btnMic"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_mic"
+            android:background="@android:color/transparent"
+            android:contentDescription="Mic"
+            android:padding="6dp" />
+
+        <!-- 📤 Gönder Butonu -->
+        <ImageButton
+            android:id="@+id/btnSend"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@android:drawable/ic_menu_send"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/send_button"
+            android:padding="6dp"
+            app:tint="#2196F3" />
+    </LinearLayout>
+</LinearLayout>
