@@ -12,8 +12,7 @@
         android:id="@+id/btn_new_chat"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="New Chat"
-        tools:ignore="MissingConstraints" />
+        android:text="New Chat" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_chat_sessions"
@@ -22,4 +21,5 @@
         android:layout_weight="1"
         android:paddingTop="12dp"
         tools:listitem="@layout/item_chat_session" />
+
 </LinearLayout>

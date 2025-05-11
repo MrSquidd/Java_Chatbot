@@ -5,6 +5,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Sohbet geçmişi fragment alanı -->
+    <FrameLayout
+        android:id="@+id/chat_drawer_container"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone" />
+
     <!-- Ana içerik -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -34,8 +41,6 @@
                 android:fontFamily="@font/popins_bold"
                 android:paddingEnd="72dp" />
         </androidx.appcompat.widget.Toolbar>
-
-
 
         <!-- Mesajlar -->
         <ScrollView
