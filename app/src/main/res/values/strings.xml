@@ -1,6 +1,10 @@
 <resources>
-    <string name="app_name">Chatbot</string>
+    <string name="app_name">Echo AI</string>
     <string name="app_title">Echo AI</string>
     <string name="hint_message">Mesajınızı yazın...</string>
     <string name="send_button">Gönder</string>
+
+    <!-- Drawer için gerekli -->
+    <string name="navigation_drawer_open">Menüyü Aç</string>
+    <string name="navigation_drawer_close">Menüyü Kapat</string>
 </resources>

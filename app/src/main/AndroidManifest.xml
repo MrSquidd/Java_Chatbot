@@ -3,8 +3,16 @@
     package="com.example.sondeneme"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- GEREKEN İZİN -->
+    <!-- GEREKLİ İZİNLER -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Android 12 ve öncesi için (API 32 ve altı) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- Android 13+ için (API 33 ve üstü) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <application
         android:allowBackup="true"
@@ -17,12 +25,17 @@
         android:theme="@style/Theme.SonDeneme"
         tools:targetApi="31">
 
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".SettingsActivity" />
+
 
     </application>
 
